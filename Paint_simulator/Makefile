@@ -1,4 +1,4 @@
-uild:
+build:
 	gcc -Wall main.c -o image_processing
 
 run:
