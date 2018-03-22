@@ -1,661 +1,612 @@
 //Peticila Alexandru 311 CB
-
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "bmp_header.h"
 
 #pragma pack(1)
 
-//structura fileheader-ului
-
-typedef struct
+typedef struct pixel
 {
-    unsigned char  marker1; 
-    unsigned char  marker2; 
-    unsigned int   fsize; 
-    unsigned short unused1;
-    unsigned short unused2;
-    unsigned int   offset; 
-} fheader;
+    unsigned char b, g, r;
+} px;
 
-//structura infoheader-ului
-
-typedef struct
+typedef struct zn
 {
-    unsigned int   isize; 
-    signed int     latime; 
-    signed int     lungime; 
-    unsigned short planes ;
-    unsigned short bitPix ;
-    unsigned int   biCompression ;
-    unsigned int   imgsize; 
-    int            biXPelsPerMeter ;
-    int            biYPelsPerMeter ;
-    unsigned int   biClrUsed ;
-    unsigned int   biClrImportant ;
-} iheader;
+    unsigned char b, g, r;
+    int k;
+} zn;
+
+typedef struct tpl
+{
+    unsigned char b, g, r;
+    short l, c;
+} tpl;
+
+typedef struct coada
+{
+    unsigned short l, c;
+} cd;
 
 #pragma pack()
 
-// functie care schimba culorile cifrelor si creeaza noua imagine
-
-void task1( fheader f, iheader i, unsigned char * imagine, int size, int pad, char *s, int a, int v, int r) 
+int padding(int width)
 {
-	FILE *fp;
-	int j,l=0;
+    int multiplu = 0, i = 1;
+    while(multiplu < (width * 3))
+    {
+        multiplu = 4 * i;
+        i++;
+    }
 
-	//parcurgem vectorul cu pixeli sarind peste bitii de padding
-
-	for(j=0; j< size; j+=3)
-	{
-		if((j-l)%(3*i.latime)==0 && j!=0)
-		{
-			j=j+pad;
-			l=l+pad;
-		}
-
-		//daca nu avem pixel colorat ii modificam culoarea
-
-		if(imagine[j] != 255 || imagine[j+1] != 255 || imagine[j+2] != 255 )
-		{
-			imagine[j]=a;
-			imagine[j+1]=v;
-			imagine[j+2]=r;
-		}
-	}
-
-	//cream noua imagine
-
-	fp=fopen(s, "wb");
-	
-	fwrite(&f,sizeof(fheader),1,fp);
-	
-	fwrite(&i,sizeof(iheader),1,fp);
-	
-	fwrite(imagine,size,1,fp);
-
-	fclose(fp);
+    return (multiplu - (width * 3));
 }
 
-//functie care recunoaste numerele in functie de numarul de pixeli colorati
-
-int numar( int ** matrice, int l, int c, int size) 
+bfh *citire_fh(char numeimg[100], bfh *fh)
 {
-	int i,j,nr=0, ** aux;
+    FILE *in = fopen(numeimg, "rb");
 
-	aux=calloc(5, sizeof( int * ) );
-	if( !aux )
-	{
-		return -1;
-	}
+    fh = calloc(1, sizeof(bfh));
+    fread(&fh->fileMarker1, sizeof(char), 1, in);
+    fread(&fh->fileMarker2, sizeof(char), 1, in);
+    fread(&fh->bfSize, sizeof(int), 1, in);
+    fread(&fh->unused1, sizeof(short), 1, in);
+    fread(&fh->unused2, sizeof(short), 1, in);
+    fread(&fh->imageDataOffset, sizeof(int), 1, in);
 
-	for( i=0; i<5; i++ )
-	{
-		aux[i]= calloc( 5, sizeof ( int ) );
-		
-		if( !aux[i] )
-		{
-			for( j=0; j < i; j++ )
-			{
-				free(aux[j]);
-			}
-			free(aux);
-		}
-	}
-	
-	// in auxiliar salvam matricea 5x5 a cifrei respective 
+    fclose(in);
 
-	for( i=0; i < 5 ; i++)
-		for ( j=0 ; j< 5 ; j++ )
-		{
-			aux[i][j]=matrice[l+i][j+c];
-
-			if( matrice[l+i][j+c]!= size+1)
-			{
-				// calculam cati pixeli colorati are cifra respectiva
-
-				nr++;
-			}
-		}
-
-	// in functie de valoarea contorului nr si de valorile anumitor pozitii din
-	// aux, returnam cifra corespunzatoare si eliberam memoria inainte	
-
-	if( nr == 5 ) 
-	{
-		for( i=0; i<5; i++ )
-		{
-			free(aux[i]);
-		}
-
-		free(aux);
-		return 1;
-	}
-
-	if( nr == 19 )
-	{
-		for( i=0; i<5; i++ )
-		{
-			free(aux[i]);
-		}
-
-		free(aux);
-		return 8;
-	}
-
-	if( nr == 9 )
-	{	
-		for( i=0; i<5; i++ )
-		{
-			free(aux[i]);
-		}
-
-		free(aux);
-		return 7;
-	}
-	
-	if( nr == 16 )
-	{
-		for( i=0; i<5; i++ )
-		{
-			free(aux[i]);
-		}
-
-		free(aux);
-		return 0;
-	}
-
-	if( nr == 11 )
-	{
-		for( i=0; i<5; i++ )
-		{
-			free(aux[i]);
-		}
-
-		free(aux);	
-		return 4;
-	}
-
-	if( nr == 18 )
-	{
-		if( aux[1][0] != size+1)
-		{
-			for( i=0; i<5; i++ )
-			{
-				free(aux[i]);
-			}
-
-			free(aux);
-			return 9;
-		}
-		
-		else
-		{
-			for( i=0; i<5; i++ )
-			{
-				free(aux[i]);
-			}
-
-			free(aux);
-			return 6;
-		}
-	}
-	
-	if ( nr == 17 )
-	{
-		if( aux[1][4] != size+1)
-		{
-			for( i=0; i<5; i++ )
-			{
-				free(aux[i]);
-			}
-
-			free(aux);
-			return 5;
-		}
-
-		else
-			if( aux[3][0] != size+1)
-			{
-				for( i=0; i<5; i++ )
-				{
-					free(aux[i]);
-				}
-
-				free(aux);
-				return 3;
-			}
-	}
-	
-	for( i=0; i<5; i++ )
-	{
-		free(aux[i]);
-	}
-
-	free(aux);
-	return 2;
-}	
-
-// functie care inlocuieste o cifra cu o alta sau cu pixeli albi in matrice
-
-void inlocuire( int ** matrice, int l, int c, int **aux) //task 3
-{
-	int i,j,z;
-	
-	for(i=0; i< 5; i++)
-	{
-		for(j=0 ; j < 5; j++)
-		{
-			z=matrice[l+i][j+c];
-
-			matrice[l+i][j+c]=aux[i][j];
-
-			//salvez in auxiliar cifra pe care am inlocuit-o 
-			//pentru a o pune la stanga
-
-			aux[i][j]=z;
-		}
-	}
+    return fh;
 }
 
-// functie care muta toate numerele de la dreapta numarului cautat 
-// cu o pozitie la stanga
-
-void eliminare( int ** matrice, int j, int lungime, int ** aux,int size) 
+bih *citire_ih(char numeimg[100], bih *ih)
 {
+    FILE *in = fopen(numeimg, "rb");
+    fseek(in, 14, SEEK_SET);
 
-	int l,c;
+    ih = calloc(1, sizeof(bih));
+    fread(&ih->biSize, sizeof(int), 1, in);
+    fread(&ih->width, sizeof(int), 1, in);
+    fread(&ih->height, sizeof(int), 1, in);
+    fread(&ih->planes, sizeof(short), 1, in);
+    fread(&ih->bitPix, sizeof(short), 1, in);
+    fread(&ih->biCompression, sizeof(int), 1, in);
+    fread(&ih->biSizeImage, sizeof(int), 1, in);
+    fread(&ih->biXPelsPerMeter, sizeof(int), 1, in);
+    fread(&ih->biYPelsPerMeter, sizeof(int), 1, in);
+    fread(&ih->biClrUsed, sizeof(int), 1, in);
+    fread(&ih->biClrImportant, sizeof(int), 1, in);
 
-	// parcurgem matricea pe coloane pana la pozitia
-	// unde am gasit numarul ce trebuie eliminat
+    fclose(in);
 
-	for( c=0; c <= j; c++)
-	{
-		for( l=0; l < lungime; l ++)
-		{
-			// daca am gasit un pixel colorat
+    return ih;
+}
 
-			if(matrice[l][c]!= size+1)
-			{
-				// si matricea 5x5 corespunzatoare e o cifra
+px **citire_mat(char numeimg[100], bih *ih, bfh *fh, px **mat)
+{
+    int pad = padding(ih->width), i, j;
+    FILE *in = fopen(numeimg, "rb");
+    fseek(in, fh->imageDataOffset, SEEK_SET);
 
-				if(matrice[l][c-1]== size+1 && matrice[l+1][c-1]==size+1 )
-				{
-					if(matrice[l+2][c-1]==size+1 && matrice[l+3][c-1]==size+1)
-					{
+    mat = calloc(ih->height, sizeof(px*));
+    for(i = 0; i < ih->height; i++)
+        mat[i] = calloc(ih->width, sizeof(px));
 
-					// inlocuiesc cifra cu ce se afla in auxiliar si trec pe coloana urmatoare
+    for(i = ih->height - 1; i >= 0 ; i--)
+    {
+        for(j = 0; j < ih->width; j++)
+        {
+            fread(&mat[i][j].b, sizeof(char), 1, in);
+            fread(&mat[i][j].g, sizeof(char), 1, in);
+            fread(&mat[i][j].r, sizeof(char), 1, in);
+        }
+        fseek(in, pad, SEEK_CUR);
+    }
 
-						inlocuire(matrice,l,c,aux);				
-						l=lungime;
-					}
-				}
-			}
-		}
-	}
-	
-	// dupa ce am facut toata inlocuirile 
-	//reintializam auxiliarul cu pixeli albi
+    fclose(in);
 
-	for(c=0; c<5; c++)
-	{
-		for(l=0; l<5; l++)
-		{
-			aux[c][l]=size+1;
-		}
-	}
+    return mat;
+
+}
+
+void headw(char img[100], bih *ih, bfh *fh)
+{
+    int i;
+    char zero = 0;
+    FILE *out = fopen(img, "wb");
+
+    fwrite(&fh->fileMarker1, sizeof(char), 1, out);
+    fwrite(&fh->fileMarker2, sizeof(char), 1, out);
+    fwrite(&fh->bfSize, sizeof(int), 1, out);
+    fwrite(&fh->unused1, sizeof(short), 1, out);
+    fwrite(&fh->unused2, sizeof(short), 1, out);
+    fwrite(&fh->imageDataOffset, sizeof(int), 1, out);
+    fwrite(&ih->biSize, sizeof(int), 1, out);
+    fwrite(&ih->width, sizeof(int), 1, out);
+    fwrite(&ih->height, sizeof(int), 1, out);
+    fwrite(&ih->planes, sizeof(short), 1, out);
+    fwrite(&ih->bitPix, sizeof(short), 1, out);
+    fwrite(&ih->biCompression, sizeof(int), 1, out);
+    fwrite(&ih->biSizeImage, sizeof(int), 1, out);
+    fwrite(&ih->biXPelsPerMeter, sizeof(int), 1, out);
+    fwrite(&ih->biYPelsPerMeter, sizeof(int), 1, out);
+    fwrite(&ih->biClrUsed, sizeof(int), 1, out);
+    fwrite(&ih->biClrImportant, sizeof(int), 1, out);
+
+    for(i = ftell(out); i < fh->imageDataOffset; i++)
+        fwrite(&zero, sizeof(char), 1, out);
+
+    fclose(out);
+}
+
+void bw(char nume[100], bih *ih, bfh *fh, px **mat)
+{
+    char *pct, zero = 0, medie, numeimg[100];
+    int pad = padding(ih->width), i, j;
+
+    strcpy(numeimg, nume);
+    pct = strchr(numeimg, '.');
+    strcpy(pct, "_black_white.bmp");
+
+    headw(numeimg, ih, fh);
+
+    FILE *out = fopen(numeimg, "ab");
+
+    for(i = ih->height - 1; i >= 0 ; i--)
+    {
+        for(j = 0; j < ih->width; j++)
+        {
+            medie = (mat[i][j].b + mat[i][j].g + mat[i][j].r) / 3;
+            fwrite(&medie, sizeof(char), 1, out);
+            fwrite(&medie, sizeof(char), 1, out);
+            fwrite(&medie, sizeof(char), 1, out);
+        }
+        for(j = 0; j < pad; j++)
+            fwrite(&zero, sizeof(char), 1, out);
+    }
+
+    fclose(out);
+}
+
+px *flt(bih *ih, px **mat, px *pixelf, char filtru[4][4], int l, int c)
+{
+    int i, j, fi = 0, fj = 0;
+    int b = 0, g = 0, r = 0;
+
+    for(i = l - 1; i <= l + 1; i++)
+    {
+        fj = 0;
+        for(j = c - 1; j <= c + 1; j++)
+        {
+            if(i >= 0 && i < ih->height && j >= 0 && j < ih->width)
+            {
+                b += mat[i][j].b * filtru[fi][fj];
+                g += mat[i][j].g * filtru[fi][fj];
+                r += mat[i][j].r * filtru[fi][fj];
+            }
+            fj++;
+        }
+        fi++;
+    }
+    if(b > 255)
+        pixelf->b = 255;
+    else if(b < 0)
+        pixelf->b = 0;
+    else
+        pixelf->b = b;
+
+    if(g > 255)
+        pixelf->g = 255;
+    else if(g < 0)
+        pixelf->g = 0;
+    else
+        pixelf->g = g;
+
+    if(r > 255)
+        pixelf->r = 255;
+    else if(r < 0)
+        pixelf->r = 0;
+    else
+        pixelf->r = r;
+
+    return pixelf;
+}
+
+void f1(char nume[100], bih *ih, bfh *fh, px **mat)
+{
+    int pad = padding(ih->width), i, j;
+    px *pixelf = calloc(1, sizeof(px));
+    char *pct, zero = 0, numeimg[100];
+    char filtru[4][4] = {
+                {-1, -1, -1},
+                {-1, 8, -1},
+                {-1, -1, -1}
+	};
+
+	strcpy(numeimg, nume);
+    pct = strchr(numeimg, '.');
+    strcpy(pct, "_f1.bmp");
+
+    headw(numeimg, ih, fh);
+
+    FILE *out = fopen(numeimg, "ab");
+
+    for(i = ih->height - 1; i >= 0 ; i--)
+    {
+        for(j = 0; j < ih->width; j++)
+        {
+            pixelf = flt(ih, mat, pixelf, filtru, i, j);
+            fwrite(&pixelf->b, sizeof(char), 1, out);
+            fwrite(&pixelf->g, sizeof(char), 1, out);
+            fwrite(&pixelf->r, sizeof(char), 1, out);
+        }
+        for(j = 0; j < pad; j++)
+            fwrite(&zero, sizeof(char), 1, out);
+    }
+
+    free(pixelf);
+    fclose(out);
+}
+
+void f2(char nume[100], bih *ih, bfh *fh, px **mat)
+{
+    int pad = padding(ih->width), i, j;
+    px *pixelf = calloc(1, sizeof(px));
+    char *pct, zero = 0, numeimg[100];
+    char filtru[4][4] = {
+                {0, 1, 0},
+                {1, -4, 1},
+                {0, 1, 0}
+	};
+
+	strcpy(numeimg, nume);
+    pct = strchr(numeimg, '.');
+    strcpy(pct, "_f2.bmp");
+
+    headw(numeimg, ih, fh);
+
+    FILE *out = fopen(numeimg, "ab");
+
+    for(i = ih->height - 1; i >= 0 ; i--)
+    {
+        for(j = 0; j < ih->width; j++)
+        {
+            pixelf = flt(ih, mat, pixelf, filtru, i, j);
+            fwrite(&pixelf->b, sizeof(char), 1, out);
+            fwrite(&pixelf->g, sizeof(char), 1, out);
+            fwrite(&pixelf->r, sizeof(char), 1, out);
+        }
+        for(j = 0; j < pad; j++)
+            fwrite(&zero, sizeof(char), 1, out);
+    }
+
+    free(pixelf);
+    fclose(out);
+}
+
+void f3(char nume[100], bih *ih, bfh *fh, px **mat)
+{
+    int pad = padding(ih->width), i, j;
+    px *pixelf = calloc(1, sizeof(px));
+    char *pct, zero = 0, numeimg[100];
+    char filtru[4][4] = {
+                {1, 0, -1},
+                {0, 0, 0},
+                {-1, 0, 1}
+	};
+
+    strcpy(numeimg, nume);
+    pct = strchr(numeimg, '.');
+    strcpy(pct, "_f3.bmp");
+
+    headw(numeimg, ih, fh);
+
+    FILE *out = fopen(numeimg, "ab");
+
+    for(i = ih->height - 1; i >= 0 ; i--)
+    {
+        for(j = 0; j < ih->width; j++)
+        {
+            pixelf = flt(ih, mat, pixelf, filtru, i, j);
+            fwrite(&pixelf->b, sizeof(char), 1, out);
+            fwrite(&pixelf->g, sizeof(char), 1, out);
+            fwrite(&pixelf->r, sizeof(char), 1, out);
+        }
+        for(j = 0; j < pad; j++)
+            fwrite(&zero, sizeof(char), 1, out);
+    }
+
+    free(pixelf);
+    fclose(out);
+}
+
+int gol(int vf)
+{
+    if(vf >= 0)
+        return 1;
+    else
+        return 0;
+}
+
+cd *push(int i, int j, int *vf, cd *elem)
+{
+    (*vf)++;
+    elem[*vf].l = i;
+    elem[*vf].c = j;
+
+    return elem;
+}
+
+void pop(int *vf, int *i, int *j, cd *elem)
+{
+    if(gol(*vf) == 1)
+    {
+        *j = elem[0].c;
+        *i = elem[0].l;
+        memmove(elem, elem + 1, *vf * sizeof(cd));
+        (*vf)--;
+    }
+}
+
+zn **fill(int i, int j, bih *ih, px pixelb, zn **zona, int thr, int k)
+{
+    int vf = -1, b, g, r;
+    cd *elem;
+    elem = calloc(5000, sizeof(cd));
+
+    elem = push(i, j, &vf, elem);
+    while(gol(vf))
+    {
+        pop(&vf, &i, &j, elem);
+        b = abs(pixelb.b - zona[i][j].b);
+        g = abs(pixelb.g - zona[i][j].g);
+        r = abs(pixelb.r - zona[i][j].r);
+        if(zona[i][j].k == 0 && (b + g + r) <= thr)
+        {
+            zona[i][j].b = pixelb.b;
+            zona[i][j].g = pixelb.g;
+            zona[i][j].r = pixelb.r;
+            zona[i][j].k = k;
+            if(j < ih->width - 1)
+                elem = push(i, j + 1, &vf, elem);
+            if(j > 0)
+                elem = push(i, j - 1, &vf, elem);
+            if(i < ih->height - 1)
+                elem = push(i + 1, j, &vf, elem);
+            if(i > 0)
+                elem = push(i - 1, j, &vf, elem);
+        }
+    }
+    free(elem);
+    return zona;
+}
+
+void compress(bih *ih, bfh *fh, px **mat, int thr)
+{
+    int i, j, k = 1, val = 1, dist;
+    zn **zona;
+    char nume[15] = "compressed.bin";
+    px pixelb;
+
+    headw(nume, ih, fh);
+
+    FILE *out = fopen(nume, "ab");
+
+    zona = calloc(ih->height, sizeof(zn*));
+    for(i = 0; i < ih->height; i++)
+    {
+        zona[i] = calloc(ih->width, sizeof(zn));
+        memset(&zona[i]->k, 0, ih->width * sizeof(int));
+    }
+
+    for(i = 0; i < ih->height; i++)
+        for(j = 0; j < ih->width; j++)
+        {
+            zona[i][j].b = mat[i][j].b;
+            zona[i][j].g = mat[i][j].g;
+            zona[i][j].r = mat[i][j].r;
+        }
+
+    pixelb.b = zona[0][0].b;
+    pixelb.g = zona[0][0].g;
+    pixelb.r = zona[0][0].r;
+    zona = fill(0, 0, ih, pixelb, zona, thr, 1);
+
+    for(i = 0; i < ih->height; i++)
+    {
+        for(j = 0; j < ih->width; j++)
+            if(zona[i][j].k == 0)
+            {
+                k++;
+                pixelb.b = zona[i][j].b;
+                pixelb.g = zona[i][j].g;
+                pixelb.r = zona[i][j].r;
+                zona = fill(i, j, ih, pixelb, zona, thr, k);
+            }
+    }
+
+    for(j = 1; j <= ih->width; j++)
+    {
+        fwrite(&val, sizeof(short), 1, out);
+        fwrite(&j, sizeof(short), 1, out);
+        fwrite(&zona[0][j-1].r, sizeof(char), 1, out);
+        fwrite(&zona[0][j-1].g, sizeof(char), 1, out);
+        fwrite(&zona[0][j-1].b, sizeof(char), 1, out);
+    }
+
+    for(i = 1; i < ih->height - 1; i++)
+    {
+        dist = 0;
+        k = 0;
+        for(j = 0; j < ih->width; j++)
+        {
+            if(zona[i][j].k != k)
+            {
+                if(dist > 1)
+                {
+                    val = i + 1;
+                    fwrite(&val, sizeof(short), 1, out);
+                    fwrite(&j, sizeof(short), 1, out);
+                    fwrite(&zona[i][j - 1].r, sizeof(char), 1, out);
+                    fwrite(&zona[i][j - 1].g, sizeof(char), 1, out);
+                    fwrite(&zona[i][j - 1].b, sizeof(char), 1, out);
+                }
+                val = i + 1;
+                fwrite(&val, sizeof(short), 1, out);
+                val = j + 1;
+                fwrite(&val, sizeof(short), 1, out);
+                fwrite(&zona[i][j].r, sizeof(char), 1, out);
+                fwrite(&zona[i][j].g, sizeof(char), 1, out);
+                fwrite(&zona[i][j].b, sizeof(char), 1, out);
+                k = zona[i][j].k;
+                dist = 0;
+            }
+            if((zona[i - 1][j].k != k || zona[i + 1][j].k != k) && dist > 0)
+            {
+                val = i + 1;
+                fwrite(&val, sizeof(short), 1, out);
+                val = j + 1;
+                fwrite(&val, sizeof(short), 1, out);
+                fwrite(&zona[i][j].r, sizeof(char), 1, out);
+                fwrite(&zona[i][j].g, sizeof(char), 1, out);
+                fwrite(&zona[i][j].b, sizeof(char), 1, out);
+                k = zona[i][j].k;
+                dist = 0;
+            }
+            if(j == ih->width - 1 && dist > 0)
+            {
+                val = i + 1;
+                fwrite(&val, sizeof(short), 1, out);
+                val = j + 1;
+                fwrite(&val, sizeof(short), 1, out);
+                fwrite(&zona[i][j].r, sizeof(char), 1, out);
+                fwrite(&zona[i][j].g, sizeof(char), 1, out);
+                fwrite(&zona[i][j].b, sizeof(char), 1, out);
+                k = zona[i][j].k;
+            }
+            dist++;
+        }
+    }
+
+    for(j = 1; j <= ih->width; j++)
+    {
+        fwrite(&ih->height, sizeof(short), 1, out);
+        fwrite(&j, sizeof(short), 1, out);
+        fwrite(&zona[ih->height - 1][j-1].r, sizeof(char), 1, out);
+        fwrite(&zona[ih->height - 1][j-1].g, sizeof(char), 1, out);
+        fwrite(&zona[ih->height - 1][j-1].b, sizeof(char), 1, out);
+    }
+
+    for(i = 0; i < ih->height; i++)
+        free(zona[i]);
+    free(zona);
+
+    fclose(out);
+}
+
+void decompress(char nume[100], bih *ih, bfh *fh)
+{
+    int pad = padding(ih->width), i, j;
+    char zero = 0, numeimg[100];
+    tpl decomp;
+    px **mat;
+
+    strcpy(numeimg, "decompressed.bmp");
+
+    headw(numeimg, ih, fh);
+
+    mat = calloc(ih->height, sizeof(px*));
+    for(i = 0; i < ih->height; i++)
+        mat[i] = calloc(ih->width, sizeof(px));
+
+    FILE *in = fopen(nume, "rb");
+    fseek(in, fh->imageDataOffset, SEEK_SET);
+
+    while(!feof(in))
+    {
+        fread(&decomp.l, sizeof(short), 1, in);
+        fread(&decomp.c, sizeof(short), 1, in);
+        fread(&decomp.r, sizeof(char), 1, in);
+        fread(&decomp.g, sizeof(char), 1, in);
+        fread(&decomp.b, sizeof(char), 1, in);
+        for(j = decomp.c - 1; j < ih->width; j++)
+        {
+            mat[decomp.l - 1][j].b = decomp.b;
+            mat[decomp.l - 1][j].g = decomp.g;
+            mat[decomp.l - 1][j].r = decomp.r;
+        }
+    }
+
+    fclose(in);
+
+    FILE *out = fopen(numeimg, "ab");
+
+    for(i = ih->height - 1; i >= 0 ; i--)
+    {
+        for(j = 0; j < ih->width; j++)
+        {
+            fwrite(&mat[i][j].b, sizeof(char), 1, out);
+            fwrite(&mat[i][j].g, sizeof(char), 1, out);
+            fwrite(&mat[i][j].r, sizeof(char), 1, out);
+        }
+        for(j = 0; j < pad; j++)
+            fwrite(&zero, sizeof(char), 1, out);
+    }
+
+    fclose(out);
+
+    for(i = 0; i < ih->height; i++)
+        free(mat[i]);
+    free(mat);
 }
 
 int main()
 {
-	fheader f;
-	iheader i;
-	unsigned char * imagine, * imagine1;
+    int i, thr;
+    char numeimg[100], archive[100], nume[100], *pct;
+    px **mat = NULL;
+    bfh *fh = NULL;
+    bih *ih = NULL;
 
-	char *s;
+    FILE *in = fopen("input.txt", "rt");
+    fscanf(in, "%s %d %s", numeimg, &thr, archive);
 
-	FILE *fp;
+    fclose(in);
 
-	int pad=0,a,v,r,n=0,e,size;
+    fh = citire_fh(numeimg, fh);
+    ih = citire_ih(numeimg, ih);
+    mat = citire_mat(numeimg, ih, fh, mat);
 
-	int j,k,l=0,c=0,nr=0;
+    bw(numeimg, ih, fh, mat);
 
-	int ** matrice, **aux, * numere, * vect;
+    compress(ih, fh, mat, thr);
 
-	// alocam memorie pentru vectorii si sirurile ajutatoare
+    strcpy(nume, numeimg);
+    pct = strchr(nume, '.');
+    strcpy(pct, "_black_white.bmp");
 
-	vect = calloc( 100, sizeof ( int ) );
-	if( !vect )
-	{
-		printf("Nu s-a reusit alocarea lui vect");
-	}
+    for(i = 0; i < ih->height; i++)
+        free(mat[i]);
+    free(mat);
+    mat = citire_mat(nume, ih, fh, mat);
 
-	numere = calloc( 100, sizeof( int ) );
-	if( !numere )
-	{
-		printf("Nu s-a reusit alocarea lui numere");
-	}
+    f1(numeimg, ih, fh, mat);
+    f2(numeimg, ih, fh, mat);
+    f3(numeimg, ih, fh, mat);
 
-	s=calloc( 100, sizeof( char ) );
-	if( !s )
-	{
-		printf(" Nu s-a reusit alocarea lui s");
-	}
+    for(i = 0; i < ih->height; i++)
+        free(mat[i]);
+    free(mat);
+    free(fh);
+    free(ih);
 
-	aux=calloc(5,sizeof(int*));
-	if(!aux)
-		printf("Nu s-a reusit alocarea");
+    fh = citire_fh(archive, fh);
+    ih = citire_ih(archive, ih);
 
-	for(j=0; j< 5; j++)
-	{
-		aux[j]=calloc(5,sizeof(int));
-		if(! aux[j])
-		{
-			for(k=0 ; k<j; k++)
-			{
-				free(aux[k]);
-			}
-			free(aux);
-		}
-	}
+    decompress(archive, ih, fh);
 
-	//citirea datelor din input
+    free(fh);
+    free(ih);
 
-	fp=fopen("input.txt","r");
-
-	fscanf(fp,"%s%d%d%d",s,&a,&v,&r);
-
-	while( fscanf(fp,"%d",&numere[n]) == 1)
-	{
-		n++;
-	}
-	
-	fclose(fp);
-
-	//citirea imaginii 
-
-	fp=fopen(s, "rb");
-
-	fread(&f,sizeof(fheader),1,fp);
-
-	fread(&i,sizeof(iheader),1,fp);
-
-	// calculam valoarea padding-ului si dimensiunea ce ia in calcul padding-ul
-
-	while( (i.latime*3 +pad) %4 != 0)
-	{
-		pad++;
-	}
-	
-	size=i.lungime*(i.latime*3+pad);
-
-	// alocam memorie pentru vectorii de pixeli
-	
-	imagine=calloc(size+1, sizeof( unsigned char ) ) ;
-	
-	if(!imagine)
-	{
-		return -1;
-	}
-	
-	
-	imagine1=calloc(size+1, sizeof( unsigned char ) ) ;
-	
-	if(!imagine1)
-	{
-		return -1;
-	}
-
-	//citim matricea de pixeli
-
-	fread(imagine,size,1,fp);
-	
-	fclose(fp);
-
-	// alocam memorie pentru matricea auxiliara
-
-	matrice=calloc(i.lungime,sizeof (int *));
-	if(! matrice)
-		printf("Nu s-a reusit alocarea");
-
-	for(j=0; j< i.lungime; j++)
-	{
-		matrice[j]=calloc(i.latime,sizeof(int));
-		if(! matrice[j])
-		{
-			for(k=0 ; k<j; k++)
-			{
-				free(matrice[k]);
-			}
-			free(matrice);
-		}
-	}
-
-	//Task-ul 2
-
-	// punem in matricea auxiliara pozitia pixelului din 
-	//vectorul imagine cand avem pixel colorat si size+1 daca pixelul e alb si
-	//retinem in matrice imaginea de la dreapta la stanga
-
-	for(j=i.lungime -1 ; j >= 0; j--)
-	{
-		for(k=i.latime-1; k >= 0; k--)
-		{
-			if( (l-c)% (3*i.latime)==0 && l!=0)
-			{
-				// sarim peste padding 
-
-				l=l+pad;
-				c=c+pad;
-			}
-
-			if(imagine[l] == 255 && imagine[l+1] == 255 && imagine[l+2] == 255 )
-			{
-				matrice[j][k]=size+1;
-			}
-			else
-			{
-				matrice[j][k]=l;
-			}			
-			l=l+3;
-		}
-	}
-	
-	// cream fisierul corespunzator task-ului
-	
-	s[ strlen(s) -4 ]= '\0';
-	strcat(s,"_task2.txt");
-
-	fp=fopen(s,"w");
-
-	l=0;
-
-	// parcurgem matricea pe coloane
-
-	for(j=0;j<i.latime;j++)
-	{
-		for(k=0; k<i.lungime;k++)
-		{
-			//daca gasim un pixel colorat
-	
-			if(matrice[k][j]!= size+1)
-			{
-				// daca matricea de 5x5 corespunde unei cifre
-
-				if( matrice[k][j-1]== size+1 && matrice[k+1][j-1]==size+1 )
-				{
-					if( matrice[k+2][j-1]==size+1 && matrice[k+3][j-1]==size+1 )
-					{
-					
-					//scriem cifra recunoscuta in vect si trecem la coloana urmatoare
-
-						vect[l]=numar(matrice,k,j,size);
-						l++;
-						k=i.lungime;
-					}
-				}
-			}
-		}
-	}
-	
-	// scriem in fisier cifrele recunoscute in ordine inversa
-	
-	for(j=l-1;j>=0;j--)
-	{
-		fprintf(fp,"%d",vect[j]);
-	}
-	fclose(fp);
-
-	//Task 3
-
-	// pentru fiecare numar citit din input
-	for(e=0; e<n ;e++)
-	{
-
-		//initiliazam auxiliarul cu pixeli albi
-		
-		for(j=0; j<5; j++)
-		{
-			for(k=0; k<5; k++)
-			{
-			aux[j][k]=size+1;
-			}
-		}
-		
-		// parcurgem matricea pe coloane 
-
-		for( j=0; j < i.latime-4 ; j++ )
-		{
-			for( k=0; k < i.lungime -4; k++ )
-			{
-				//daca am gasit un pixel colorat
-
-				if(matrice[k][j]!= size+1)
-				{
-					//si matricea 5x5 corespunde unei cifre
-
-					if(matrice[k][j-1]== size+1 && matrice[k+1][j-1]==size+1 )
-					{
-						if( matrice[k+2][j-1]==size+1 && matrice[k+3][j-1]==size+1)
-						{
-							//daca cifra e chiar o cifra ce trebuie eliminata
-
-							if( numar(matrice,k,j,size) == numere[e])
-							{
-								// apelam functia eliminare
-
-								eliminare(matrice,j,i.lungime,aux,size);
-							}
-							
-							//trecem pe coloana urmatoare
-
-							k=i.lungime;
-						}
-					}
-				}			
-			}	
-		}
-	}
-	
-	l=0;
-	c=0;
-
-	// cream noul vector imagine cu cifrele mutate
-
-	for(j=i.lungime -1 ; j >= 0; j--)
-	{
-		for(k=i.latime-1; k >= 0; k--)
-		{
-			if( (l-c)% (3*i.latime)==0 && l!=0)
-			{
-				//daca am dat de bitii de padding punem 0 
-
-				for(nr=0;nr<pad;nr++)
-				{
-					imagine1[l+nr]=0;
-				}
-
-				// si trecem peste
-
-				l=l+pad;
-				c=c+pad;
-			}
-			
-			// daca in matrice avem valoarea size +1 inseamna ca avem pixel alb
-
-			if(matrice[j][k]== size +1 )
-			{
-				imagine1[l]=255;
-
-				imagine1[l+1]=255;
-
-				imagine1[l+2]=255;
-			}
-
-			else
-			{
-
-			// altfel, punem culoarea care e in imagine la pozitia 
-			//corespunzatoare valorii de pe pozitia j si k din matrice
-
-				imagine1[l]=imagine[ matrice[j][k] ];
-
-				imagine1[l+1]=imagine[ matrice[j][k]+1 ];
-
-				imagine1[l+2]=imagine[ matrice[j][k]+2 ];
-			}			
-			l=l+3;
-		}
-	}
-	
-	//cream fisierul corespunzator task-ului si scriem imaginea
-
-	s[ strlen(s) -5 ]= '\0';
-	strcat(s,"3.bmp");
-
-	fp=fopen(s, "wb");
-	
-	fwrite(&f,sizeof(fheader),1,fp);
-	
-	fwrite(&i,sizeof(iheader),1,fp);
-	
-	fwrite(imagine1,size,1,fp);
-
-	fclose(fp);
-
-	// Task-ul 1
-
-	// modificam numele fisierului si apelam functia task1
-
-	s[ strlen(s) -5 ]= '\0';
-
-	strcat(s,"1.bmp");
-
-	task1(f,i,imagine,size,pad,s,a,v,r);
-
-	// eliberam memoria
-
-	free(numere);
-
-	free(vect);
-
-	free(s);
-
-	free(imagine);
-
-	free(imagine1);
-
-	for( j=0; j < 5 ; j++)
-	{
-		free(aux[j]);
-	}
-	free(aux);
-
-	for( j=0; j < i.lungime; j++)
-	{
-		free( matrice[j] );
-	}
-	free(matrice);
-
-	return 0;	
+    return 0;
 }
